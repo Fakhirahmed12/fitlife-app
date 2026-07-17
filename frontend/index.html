@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FitLife — Your Fitness Companion</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0a0a; --surface:#141414; --card:#1c1c1c; --card2:#232323;
+    --text:#f2f2f0; --text-secondary:#9a9a95; --accent:#B8A369; --accent-dark:#8f7f4e;
+    --border:#2c2b28; --success:#5fae6f; --danger:#c15b5b; --warn:#c99a4a;
+    --chart1:#B8A369; --chart2:#6f93b8; --chart3:#7fae8f; --chart4:#bb8b6a;
+    --radius-sm:8px; --radius-md:14px; --radius-lg:20px;
+  }
+  [data-theme="light"]{
+    --bg:#f4f2ee; --surface:#ffffff; --card:#ffffff; --card2:#f7f5f0;
+    --text:#1a1a17; --text-secondary:#6c6a63; --border:#e5e1d8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    background:var(--bg); color:var(--text);
+    min-height:100vh; transition:background .3s, color .3s;
+  }
+  .app{max-width:480px; margin:0 auto; min-height:100vh; position:relative; padding-bottom:78px;}
+
+  /* ===== Onboarding ===== */
+  #onboarding{
+    position:fixed; inset:0; background:var(--bg); z-index:1000;
+    display:flex; flex-direction:column; padding:32px 24px; overflow-y:auto;
+  }
+  .ob-progress{height:4px; background:var(--border); border-radius:2px; margin-bottom:8px; overflow:hidden;}
+  .ob-progress-fill{height:100%; background:var(--accent); transition:width .3s;}
+  .ob-step-label{font-size:12px; color:var(--text-secondary); margin-bottom:32px; text-align:center; letter-spacing:.05em;}
+  .ob-step{display:none; flex:1; flex-direction:column;}
+  .ob-step.active{display:flex;}
+  .ob-icon{font-size:44px; text-align:center; margin-bottom:12px;}
+  .ob-title{font-size:24px; font-weight:700; text-align:center; margin-bottom:6px;}
+  .ob-subtitle{font-size:14px; color:var(--text-secondary); text-align:center; margin-bottom:28px;}
+  .field-label{font-size:13px; font-weight:600; margin:16px 0 6px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.04em;}
+  input[type=text], input[type=number]{
+    width:100%; background:var(--card); border:1px solid var(--border); color:var(--text);
+    padding:14px 16px; border-radius:var(--radius-md); font-size:15px; outline:none;
+  }
+  input:focus{border-color:var(--accent);}
+  .choice-row{display:flex; gap:10px; margin-top:4px;}
+  .choice-btn{
+    flex:1; padding:14px; border-radius:var(--radius-md); border:2px solid var(--border);
+    background:var(--card); color:var(--text); font-size:14px; font-weight:600; cursor:pointer;
+    transition:all .15s;
+  }
+  .choice-btn.active{background:var(--accent); border-color:var(--accent); color:#161410;}
+  .choice-card{
+    padding:18px; border-radius:var(--radius-lg); border:2px solid var(--border);
+    background:var(--card); margin-bottom:12px; cursor:pointer; transition:all .15s;
+  }
+  .choice-card.active{background:var(--accent); border-color:var(--accent); color:#161410;}
+  .choice-card-title{font-size:16px; font-weight:700; margin-bottom:2px;}
+  .choice-card-desc{font-size:13px; opacity:.75;}
+  .ob-footer{display:flex; gap:12px; padding-top:24px;}
+  .btn-primary{
+    flex:1; padding:16px; background:var(--accent); color:#161410; border:none;
+    border-radius:var(--radius-md); font-size:15px; font-weight:700; cursor:pointer;
+  }
+  .btn-secondary{
+    padding:16px 20px; background:transparent; color:var(--accent); border:2px solid var(--accent);
+    border-radius:var(--radius-md); font-size:15px; font-weight:700; cursor:pointer;
+  }
+
+  /* ===== Header ===== */
+  .topbar{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:28px 20px 16px;
+  }
+  .topbar h1{font-size:22px; font-weight:800;}
+  .topbar .sub{font-size:13px; color:var(--text-secondary); margin-top:2px;}
+  .theme-toggle{
+    width:40px; height:40px; border-radius:50%; background:var(--card);
+    border:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:18px;
+  }
+
+  /* ===== Tabs / Pages ===== */
+  .page{display:none; padding:0 20px 20px;}
+  .page.active{display:block;}
+
+  .stats-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:20px;}
+  .stat-card{background:var(--card); border-radius:var(--radius-md); padding:12px 8px; text-align:center;}
+  .stat-icon{font-size:18px;}
+  .stat-value{font-size:15px; font-weight:800; margin-top:4px;}
+  .stat-label{font-size:10px; color:var(--text-secondary); margin-top:2px; text-transform:uppercase; letter-spacing:.03em;}
+
+  .section-title{font-size:17px; font-weight:800; margin:22px 0 12px;}
+  .section-row{display:flex; justify-content:space-between; align-items:center; margin:22px 0 12px;}
+  .link-btn{color:var(--accent); font-size:13px; font-weight:700; background:none; border:none; cursor:pointer;}
+
+  .card{background:var(--card); border-radius:var(--radius-lg); padding:18px;}
+  .workout-card{cursor:pointer;}
+  .workout-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  .workout-title{font-size:17px; font-weight:800;}
+  .workout-meta{font-size:12px; color:var(--text-secondary); margin-top:2px;}
+  .badge-done{color:var(--success); font-weight:700; font-size:20px;}
+  .ex-row{display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--border);}
+  .ex-row:first-of-type{border-top:none;}
+  .ex-name{flex:1; font-size:13.5px;}
+  .ex-sets{font-size:12.5px; color:var(--text-secondary); font-weight:600;}
+
+  .water-progress-bar{height:10px; background:var(--card2); border-radius:5px; overflow:hidden; margin:10px 0;}
+  .water-progress-fill{height:100%; background:var(--chart3); transition:width .3s;}
+  .water-text{text-align:center; font-weight:700; font-size:14px; margin-bottom:14px;}
+  .water-btns{display:flex; gap:10px;}
+  .water-btn{
+    flex:1; background:var(--card2); border:none; border-radius:var(--radius-md);
+    padding:12px; color:var(--text); font-size:13px; font-weight:700; cursor:pointer;
+  }
+
+  .meal-item{display:flex; align-items:center; gap:12px; background:var(--card); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:10px;}
+  .meal-icon{width:38px; height:38px; border-radius:50%; background:var(--card2); display:flex; align-items:center; justify-content:center; font-size:17px;}
+  .meal-name{font-size:14px; font-weight:700;}
+  .meal-cal{font-size:12px; color:var(--text-secondary); margin-top:1px;}
+
+  .level-tabs{display:flex; gap:8px; margin-bottom:16px;}
+  .level-tab{flex:1; padding:10px; text-align:center; border-radius:var(--radius-md); background:var(--card); border:2px solid var(--border); font-size:13px; font-weight:700; cursor:pointer;}
+  .level-tab.active{background:var(--accent); border-color:var(--accent); color:#161410;}
+
+  .exercise-card{background:var(--card); border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; cursor:pointer;}
+  .exercise-card-top{display:flex; justify-content:space-between; align-items:center;}
+  .exercise-card-name{font-size:15px; font-weight:800;}
+  .exercise-card-muscle{font-size:12px; color:var(--text-secondary); margin-top:2px;}
+  .exercise-card-meta{font-size:13px; color:var(--accent); font-weight:700;}
+  .exercise-check{width:26px; height:26px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px;}
+  .exercise-check.done{background:var(--success); border-color:var(--success); color:#fff;}
+
+  .modal-overlay{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:900; display:none; align-items:flex-end; justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal-sheet{background:var(--surface); width:100%; max-width:480px; border-radius:24px 24px 0 0; padding:24px; max-height:85vh; overflow-y:auto;}
+  .modal-close{float:right; background:none; border:none; color:var(--text-secondary); font-size:22px; cursor:pointer;}
+  .modal-title{font-size:19px; font-weight:800; margin-bottom:4px;}
+  .modal-sub{font-size:13px; color:var(--text-secondary); margin-bottom:16px;}
+  .video-placeholder{
+    width:100%; aspect-ratio:16/10; background:linear-gradient(135deg,var(--card2),var(--card));
+    border-radius:var(--radius-md); display:flex; flex-direction:column; align-items:center; justify-content:center;
+    margin-bottom:16px; border:1px solid var(--border);
+  }
+  .video-placeholder .play{font-size:38px; color:var(--accent);}
+  .video-placeholder .vtext{font-size:12px; color:var(--text-secondary); margin-top:8px;}
+  .instr-item{display:flex; gap:10px; padding:8px 0; font-size:13.5px; line-height:1.5;}
+  .instr-num{width:22px; height:22px; flex-shrink:0; border-radius:50%; background:var(--accent); color:#161410; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;}
+
+  .timer-circle{
+    width:180px; height:180px; border-radius:50%; border:6px solid var(--accent);
+    display:flex; align-items:center; justify-content:center; margin:20px auto; font-size:42px; font-weight:800;
+  }
+  .timer-btns{display:flex; gap:10px; justify-content:center; margin-top:10px;}
+
+  .goal-select{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;}
+
+  .chart-card{background:var(--card); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;}
+  .chart-card h3{font-size:14px; font-weight:800; margin-bottom:12px;}
+  .streak-box{display:flex; align-items:center; gap:14px; background:var(--card); border-radius:var(--radius-lg); padding:18px; margin-bottom:16px;}
+  .streak-num{font-size:34px; font-weight:900; color:var(--accent);}
+  .streak-label{font-size:12px; color:var(--text-secondary);}
+
+  .profile-header{display:flex; flex-direction:column; align-items:center; padding:20px 0;}
+  .avatar{width:78px; height:78px; border-radius:50%; background:var(--accent); color:#161410; font-size:30px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:10px;}
+  .profile-name{font-size:19px; font-weight:800;}
+  .profile-goal{font-size:13px; color:var(--text-secondary); margin-top:2px;}
+  .settings-row{display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-top:1px solid var(--border);}
+  .settings-row:first-child{border-top:none;}
+  .settings-label{font-size:14px; font-weight:600;}
+  .switch{width:46px; height:26px; background:var(--border); border-radius:13px; position:relative; cursor:pointer; transition:background .2s;}
+  .switch.on{background:var(--accent);}
+  .switch-knob{width:20px; height:20px; background:#fff; border-radius:50%; position:absolute; top:3px; left:3px; transition:left .2s;}
+  .switch.on .switch-knob{left:23px;}
+
+  .calc-result{background:var(--card2); border-radius:var(--radius-md); padding:14px; margin-top:14px; text-align:center;}
+  .calc-result .val{font-size:26px; font-weight:900; color:var(--accent);}
+  .calc-result .lbl{font-size:12px; color:var(--text-secondary); margin-top:2px;}
+
+  .bottom-nav{
+    position:fixed; bottom:0; left:0; right:0; max-width:480px; margin:0 auto;
+    background:var(--surface); border-top:1px solid var(--border);
+    display:flex; padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+    z-index:100;
+  }
+  .nav-btn{flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; color:var(--text-secondary); padding:6px 0;}
+  .nav-btn.active{color:var(--accent);}
+  .nav-btn .icon{font-size:20px;}
+  .nav-btn .lbl{font-size:10px; font-weight:700;}
+
+  input[type=range]{width:100%; accent-color:var(--accent);}
+  .meas-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;}
+</style>
+</head>
+<body>
+
+<!-- ===== ONBOARDING ===== -->
+<div id="onboarding">
+  <div class="ob-progress"><div class="ob-progress-fill" id="obProgress" style="width:25%"></div></div>
+  <div class="ob-step-label" id="obStepLabel">Step 1 of 4</div>
+
+  <div class="ob-step active" data-step="1">
+    <div class="ob-icon">💪</div>
+    <div class="ob-title">Welcome to FitLife</div>
+    <div class="ob-subtitle">Let's set up your profile</div>
+    <div class="field-label">Your Name</div>
+    <input type="text" id="obName" placeholder="Enter your name">
+    <div class="field-label">Age</div>
+    <input type="number" id="obAge" placeholder="Enter your age">
+    <div class="field-label">Gender</div>
+    <div class="choice-row">
+      <button class="choice-btn active" data-val="male" onclick="selectChoice(this,'gender')">♂ Male</button>
+      <button class="choice-btn" data-val="female" onclick="selectChoice(this,'gender')">♀ Female</button>
+    </div>
+  </div>
+
+  <div class="ob-step" data-step="2">
+    <div class="ob-icon">📏</div>
+    <div class="ob-title">Body Stats</div>
+    <div class="ob-subtitle">This helps us personalize your plan</div>
+    <div class="field-label">Weight (kg)</div>
+    <input type="number" id="obWeight" placeholder="e.g. 70">
+    <div class="field-label">Height (cm)</div>
+    <input type="number" id="obHeight" placeholder="e.g. 175">
+  </div>
+
+  <div class="ob-step" data-step="3">
+    <div class="ob-icon">🏋️</div>
+    <div class="ob-title">Your Fitness Level</div>
+    <div class="ob-subtitle">Be honest — we'll adjust your workouts</div>
+    <div class="choice-card active" data-val="beginner" onclick="selectCard(this,'level')">
+      <div class="choice-card-title">Beginner</div>
+      <div class="choice-card-desc">Just starting out or returning after a break</div>
+    </div>
+    <div class="choice-card" data-val="intermediate" onclick="selectCard(this,'level')">
+      <div class="choice-card-title">Intermediate</div>
+      <div class="choice-card-desc">Regular routine, comfortable with the basics</div>
+    </div>
+    <div class="choice-card" data-val="advanced" onclick="selectCard(this,'level')">
+      <div class="choice-card-title">Advanced</div>
+      <div class="choice-card-desc">Experienced, ready for intense challenges</div>
+    </div>
+  </div>
+
+  <div class="ob-step" data-step="4">
+    <div class="ob-icon">🎯</div>
+    <div class="ob-title">Your Goal</div>
+    <div class="ob-subtitle">We'll build your plan around this</div>
+    <div class="choice-card" data-val="weight_loss" onclick="selectCard(this,'goal')">
+      <div class="choice-card-title">Weight Loss</div>
+      <div class="choice-card-desc">Burn fat and get leaner</div>
+    </div>
+    <div class="choice-card active" data-val="maintenance" onclick="selectCard(this,'goal')">
+      <div class="choice-card-title">Maintenance</div>
+      <div class="choice-card-desc">Stay fit and healthy</div>
+    </div>
+    <div class="choice-card" data-val="muscle_gain" onclick="selectCard(this,'goal')">
+      <div class="choice-card-title">Muscle Gain</div>
+      <div class="choice-card-desc">Build strength and muscle mass</div>
+    </div>
+  </div>
+
+  <div class="ob-footer">
+    <button class="btn-secondary" id="obBackBtn" style="display:none" onclick="obBack()">Back</button>
+    <button class="btn-primary" id="obNextBtn" onclick="obNext()">Next</button>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div class="app" id="app" style="display:none">
+  <div class="topbar">
+    <div>
+      <h1 id="greeting">Hello!</h1>
+      <div class="sub" id="todayDate"></div>
+    </div>
+    <div class="theme-toggle" onclick="toggleTheme()" id="themeIcon">🌙</div>
+  </div>
+
+  <!-- HOME -->
+  <div class="page active" id="page-home">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-value" id="statCal">0</div><div class="stat-label">Cal Goal</div></div>
+      <div class="stat-card"><div class="stat-icon">👣</div><div class="stat-value" id="statSteps">0</div><div class="stat-label">Steps</div></div>
+      <div class="stat-card"><div class="stat-icon">💧</div><div class="stat-value" id="statWater">0L</div><div class="stat-label">Water</div></div>
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value" id="statBMI">0</div><div class="stat-label">BMI</div></div>
+    </div>
+
+    <div class="section-row"><div class="section-title" style="margin:0">Today's Workout</div><button class="link-btn" onclick="goPage('workouts')">See All</button></div>
+    <div class="card workout-card" id="todayWorkoutCard" onclick="goPage('workouts')"></div>
+
+    <div class="section-title">Step Counter</div>
+    <div class="card">
+      <input type="range" min="0" max="15000" step="100" id="stepSlider" oninput="updateSteps(this.value)">
+      <div class="water-text"><span id="stepValue">0</span> / 10,000 steps</div>
+    </div>
+
+    <div class="section-title">Water Intake</div>
+    <div class="card">
+      <div class="water-progress-bar"><div class="water-progress-fill" id="waterFill" style="width:0%"></div></div>
+      <div class="water-text"><span id="waterAmount">0</span> / 2500 ml</div>
+      <div class="water-btns">
+        <button class="water-btn" onclick="addWater(250)">+ 250ml</button>
+        <button class="water-btn" onclick="addWater(500)">+ 500ml</button>
+      </div>
+    </div>
+
+    <div class="section-row"><div class="section-title" style="margin:0">Today's Meals</div><span class="link-btn" id="mealCalTotal"></span></div>
+    <div id="mealsList"></div>
+  </div>
+
+  <!-- WORKOUTS -->
+  <div class="page" id="page-workouts">
+    <div class="section-title" style="margin-top:20px">Workout Plans</div>
+    <div class="level-tabs" id="levelTabs"></div>
+    <div id="exerciseList"></div>
+  </div>
+
+  <!-- DIET -->
+  <div class="page" id="page-diet">
+    <div class="section-title" style="margin-top:20px">Diet Plan</div>
+    <div class="goal-select" id="goalTabs"></div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="water-text" style="margin:0">Daily Target: <span id="dietCalTotal" style="color:var(--accent)"></span> kcal</div>
+    </div>
+    <div id="dietMealsList"></div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="page" id="page-progress">
+    <div class="section-title" style="margin-top:20px">Your Progress</div>
+    <div class="streak-box">
+      <div class="streak-num" id="streakNum">0</div>
+      <div>
+        <div style="font-weight:800; font-size:14px">Day Streak 🔥</div>
+        <div class="streak-label" id="streakLabel">Complete a workout to start your streak</div>
+      </div>
+    </div>
+
+    <div class="section-title">Log Today's Weight</div>
+    <div class="card" style="margin-bottom:16px; display:flex; gap:10px; align-items:center">
+      <input type="number" id="weightLogInput" placeholder="Weight in kg" style="flex:1">
+      <button class="btn-primary" style="flex:0 0 auto; padding:14px 18px" onclick="logWeight()">Save</button>
+    </div>
+
+    <div class="chart-card">
+      <h3>Weight Trend</h3>
+      <canvas id="weightChart" height="160"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Water Intake (Last 7 Days)</h3>
+      <canvas id="waterChart" height="160"></canvas>
+    </div>
+
+    <div class="section-title">Body Measurements (cm)</div>
+    <div class="card">
+      <div class="meas-grid">
+        <div><div class="field-label" style="margin-top:0">Chest</div><input type="number" id="measChest"></div>
+        <div><div class="field-label" style="margin-top:0">Waist</div><input type="number" id="measWaist"></div>
+        <div><div class="field-label" style="margin-top:0">Arms</div><input type="number" id="measArms"></div>
+        <div><div class="field-label" style="margin-top:0">Legs</div><input type="number" id="measLegs"></div>
+      </div>
+      <button class="btn-primary" style="width:100%; margin-top:14px" onclick="saveMeasurements()">Save Measurements</button>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="page" id="page-profile">
+    <div class="profile-header">
+      <div class="avatar" id="avatarLetter">F</div>
+      <div class="profile-name" id="profileName">—</div>
+      <div class="profile-goal" id="profileMeta">—</div>
+    </div>
+
+    <div class="section-title">BMI & Calorie Calculator</div>
+    <div class="card">
+      <div class="field-label" style="margin-top:0">Weight (kg)</div>
+      <input type="number" id="calcWeight">
+      <div class="field-label">Height (cm)</div>
+      <input type="number" id="calcHeight">
+      <div class="field-label">Age</div>
+      <input type="number" id="calcAge">
+      <button class="btn-primary" style="width:100%; margin-top:16px" onclick="runCalculator()">Calculate</button>
+      <div class="calc-result" id="calcResult" style="display:none">
+        <div class="val" id="calcBMI">—</div>
+        <div class="lbl" id="calcBMICat">—</div>
+        <div class="val" id="calcCal" style="margin-top:10px">—</div>
+        <div class="lbl">Daily Calorie Target</div>
+      </div>
+    </div>
+
+    <div class="section-title">Settings</div>
+    <div class="card">
+      <div class="settings-row">
+        <div class="settings-label">Dark Mode</div>
+        <div class="switch on" id="darkSwitch" onclick="toggleTheme()"><div class="switch-knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Workout Reminders</div>
+        <div class="switch" id="notifSwitch" onclick="toggleNotif()"><div class="switch-knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Reminder Time</div>
+        <input type="text" id="reminderTime" value="18:00" style="width:90px; text-align:center; padding:8px" onchange="saveReminderTime()">
+      </div>
+    </div>
+
+    <div class="section-title">Edit Profile</div>
+    <div class="card">
+      <div class="field-label" style="margin-top:0">Name</div>
+      <input type="text" id="editName">
+      <div class="field-label">Fitness Level</div>
+      <div class="choice-row" id="editLevelRow"></div>
+      <div class="field-label">Goal</div>
+      <div class="choice-row" id="editGoalRow"></div>
+      <button class="btn-primary" style="width:100%; margin-top:16px" onclick="saveProfile()">Save Changes</button>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn active" data-page="home" onclick="goPage('home')"><span class="icon">🏠</span><span class="lbl">Home</span></button>
+    <button class="nav-btn" data-page="workouts" onclick="goPage('workouts')"><span class="icon">🏋️</span><span class="lbl">Workouts</span></button>
+    <button class="nav-btn" data-page="diet" onclick="goPage('diet')"><span class="icon">🍽️</span><span class="lbl">Diet</span></button>
+    <button class="nav-btn" data-page="progress" onclick="goPage('progress')"><span class="icon">📈</span><span class="lbl">Progress</span></button>
+    <button class="nav-btn" data-page="profile" onclick="goPage('profile')"><span class="icon">👤</span><span class="lbl">Profile</span></button>
+  </div>
+</div>
+
+<!-- Exercise Detail Modal -->
+<div class="modal-overlay" id="exerciseModal">
+  <div class="modal-sheet">
+    <button class="modal-close" onclick="closeModal('exerciseModal')">✕</button>
+    <div class="video-placeholder"><div class="play">▶</div><div class="vtext">HD demonstration video</div></div>
+    <div class="modal-title" id="modalExName">—</div>
+    <div class="modal-sub" id="modalExMeta">—</div>
+    <div id="modalExInstr"></div>
+    <button class="btn-primary" style="width:100%; margin-top:16px" onclick="openTimer()">Start Rest Timer</button>
+  </div>
+</div>
+
+<!-- Rest Timer Modal -->
+<div class="modal-overlay" id="timerModal">
+  <div class="modal-sheet" style="text-align:center">
+    <button class="modal-close" onclick="closeModal('timerModal')">✕</button>
+    <div class="modal-title">Rest Timer</div>
+    <div class="timer-circle" id="timerDisplay">60</div>
+    <div class="timer-btns">
+      <button class="btn-secondary" onclick="pauseTimer()" id="timerPauseBtn">Pause</button>
+      <button class="btn-primary" onclick="resetTimer()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const EXERCISES = {
+  beginner: [
+    {name:'Push-ups', muscle:'Chest, Triceps', sets:3, reps:'8-12', rest:60, instr:['Start in a plank position, hands shoulder-width apart','Lower body until chest nearly touches floor','Push back up to start','Keep core tight throughout']},
+    {name:'Bodyweight Squats', muscle:'Legs, Glutes', sets:3, reps:'12-15', rest:60, instr:['Stand feet shoulder-width apart','Lower by bending knees and hips','Go until thighs are parallel to floor','Push through heels to return']},
+    {name:'Plank', muscle:'Core', sets:3, reps:'30-45 sec', rest:45, instr:['Start in forearm plank position','Keep body in a straight line','Engage core and glutes','Hold without sagging']},
+    {name:'Lunges', muscle:'Legs, Glutes', sets:3, reps:'10 each leg', rest:60, instr:['Stand tall, feet hip-width apart','Step forward with one leg','Lower hips until both knees at 90°','Push back to start']},
+  ],
+  intermediate: [
+    {name:'Diamond Push-ups', muscle:'Triceps, Chest', sets:4, reps:'10-15', rest:60, instr:['Hands form a diamond shape','Keep elbows close to body','Lower chest to hands','Push up explosively']},
+    {name:'Bulgarian Split Squats', muscle:'Legs, Glutes', sets:4, reps:'12 each leg', rest:75, instr:['Rear foot on elevated surface','Lower into lunge position','Front knee aligned with ankle','Push through front heel']},
+    {name:'Mountain Climbers', muscle:'Core, Cardio', sets:4, reps:'20 each leg', rest:45, instr:['Start in high plank','Drive knee to chest','Quickly switch legs','Maintain plank form']},
+  ],
+  advanced: [
+    {name:'Pistol Squats', muscle:'Legs, Balance', sets:4, reps:'8 each leg', rest:90, instr:['Stand on one leg, extend other forward','Lower body, keep leg off ground','Go as low as possible','Push through heel to stand']},
+    {name:'Burpees', muscle:'Full Body', sets:5, reps:'15-20', rest:60, instr:['Start standing, drop to squat','Kick feet back to plank','Do a push-up','Jump feet forward and explode up']},
+    {name:'Handstand Push-ups', muscle:'Shoulders, Triceps', sets:4, reps:'6-10', rest:120, instr:['Kick up into handstand against wall','Lower head toward ground','Keep core tight','Press back to full extension']},
+  ],
+};
+
+const MEAL_PLANS = {
+  weight_loss:{cal:1800, meals:[
+    {type:'🌅',name:'Protein Oatmeal Bowl', cal:400},
+    {type:'🥗',name:'Grilled Chicken Salad', cal:500},
+    {type:'🍎',name:'Greek Yogurt & Fruit', cal:200},
+    {type:'🌙',name:'Baked Fish with Vegetables', cal:550},
+    {type:'🥤',name:'Protein Shake', cal:150},
+  ]},
+  muscle_gain:{cal:2800, meals:[
+    {type:'🌅',name:'High-Protein Breakfast', cal:650},
+    {type:'🍚',name:'Chicken & Rice Bowl', cal:750},
+    {type:'🥪',name:'Peanut Butter Sandwich', cal:400},
+    {type:'🌙',name:'Steak & Potatoes', cal:800},
+    {type:'🥤',name:'Post-Workout Shake', cal:200},
+  ]},
+  maintenance:{cal:2200, meals:[
+    {type:'🌅',name:'Balanced Breakfast', cal:500},
+    {type:'🌯',name:'Turkey Wrap', cal:600},
+    {type:'🥜',name:'Mixed Nuts & Fruit', cal:250},
+    {type:'🌙',name:'Grilled Chicken with Quinoa', cal:650},
+    {type:'🧀',name:'Cottage Cheese Bowl', cal:200},
+  ]},
+};
+
+const LEVEL_LABELS = {beginner:'Beginner', intermediate:'Intermediate', advanced:'Advanced'};
+const GOAL_LABELS = {weight_loss:'Weight Loss', muscle_gain:'Muscle Gain', maintenance:'Maintenance'};
+
+/* ============ STATE / STORAGE ============ */
+const DB = {
+  get(key, fallback){ try{ const v = localStorage.getItem('fitlife_'+key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } },
+  set(key, val){ localStorage.setItem('fitlife_'+key, JSON.stringify(val)); }
+};
+
+let profile = DB.get('profile', null);
+let today = new Date().toISOString().split('T')[0];
+let obData = {gender:'male', level:'beginner', goal:'maintenance'};
+let currentWorkoutLevel = null;
+let currentDietGoal = null;
+let activeExercise = null;
+let timerInterval = null;
+let timerSeconds = 60;
+let timerRunning = false;
+
+/* ============ ONBOARDING ============ */
+let obStep = 1;
+function selectChoice(el, key){
+  el.parentElement.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  obData[key] = el.dataset.val;
+}
+function selectCard(el, key){
+  el.parentElement.querySelectorAll('.choice-card').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  obData[key] = el.dataset.val;
+}
+function obNext(){
+  if(obStep === 1){
+    if(!document.getElementById('obName').value || !document.getElementById('obAge').value){
+      alert('Please fill in your name and age'); return;
+    }
+  }
+  if(obStep === 2){
+    if(!document.getElementById('obWeight').value || !document.getElementById('obHeight').value){
+      alert('Please fill in weight and height'); return;
+    }
+  }
+  if(obStep === 4){ completeOnboarding(); return; }
+  obStep++;
+  renderObStep();
+}
+function obBack(){ obStep--; renderObStep(); }
+function renderObStep(){
+  document.querySelectorAll('.ob-step').forEach(s=>s.classList.remove('active'));
+  document.querySelector('.ob-step[data-step="'+obStep+'"]').classList.add('active');
+  document.getElementById('obProgress').style.width = (obStep/4*100)+'%';
+  document.getElementById('obStepLabel').textContent = 'Step '+obStep+' of 4';
+  document.getElementById('obBackBtn').style.display = obStep>1 ? 'block':'none';
+  document.getElementById('obNextBtn').textContent = obStep===4 ? 'Get Started' : 'Next';
+}
+function completeOnboarding(){
+  profile = {
+    name: document.getElementById('obName').value,
+    age: parseInt(document.getElementById('obAge').value),
+    gender: obData.gender,
+    weight: parseFloat(document.getElementById('obWeight').value),
+    height: parseFloat(document.getElementById('obHeight').value),
+    level: obData.level,
+    goal: obData.goal,
+    theme: 'dark',
+    notif: false,
+    reminderTime: '18:00',
+  };
+  DB.set('profile', profile);
+  document.getElementById('onboarding').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  initApp();
+}
+
+/* ============ APP INIT ============ */
+function initApp(){
+  document.documentElement.setAttribute('data-theme', profile.theme);
+  document.getElementById('themeIcon').textContent = profile.theme === 'dark' ? '🌙' : '☀️';
+  document.getElementById('darkSwitch').classList.toggle('on', profile.theme==='dark');
+  document.getElementById('greeting').textContent = 'Hello, '+profile.name+'!';
+  document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'});
+  currentWorkoutLevel = profile.level;
+  currentDietGoal = profile.goal;
+
+  renderHome();
+  renderLevelTabs();
+  renderExercises();
+  renderGoalTabs();
+  renderDiet();
+  renderProgress();
+  renderProfile();
+}
+
+/* ============ NAVIGATION ============ */
+function goPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.nav-btn[data-page="'+name+'"]').classList.add('active');
+  if(name==='progress') renderProgress();
+}
+
+/* ============ THEME ============ */
+function toggleTheme(){
+  profile.theme = profile.theme === 'dark' ? 'light' : 'dark';
+  DB.set('profile', profile);
+  document.documentElement.setAttribute('data-theme', profile.theme);
+  document.getElementById('themeIcon').textContent = profile.theme === 'dark' ? '🌙' : '☀️';
+  document.getElementById('darkSwitch').classList.toggle('on', profile.theme==='dark');
+}
+function toggleNotif(){
+  profile.notif = !profile.notif;
+  DB.set('profile', profile);
+  document.getElementById('notifSwitch').classList.toggle('on', profile.notif);
+  if(profile.notif && 'Notification' in window){
+    Notification.requestPermission();
+  }
+}
+function saveReminderTime(){
+  profile.reminderTime = document.getElementById('reminderTime').value;
+  DB.set('profile', profile);
+}
+
+/* ============ CALCULATIONS ============ */
+function calcBMI(weight, height){
+  const h = height/100;
+  return Math.round((weight/(h*h))*10)/10;
+}
+function bmiCategory(bmi){
+  if(bmi<18.5) return 'Underweight';
+  if(bmi<25) return 'Normal';
+  if(bmi<30) return 'Overweight';
+  return 'Obese';
+}
+function calcCalories(weight, height, age, gender, goal){
+  let bmr = gender==='male' ? (10*weight+6.25*height-5*age+5) : (10*weight+6.25*height-5*age-161);
+  let tdee = bmr*1.55;
+  if(goal==='weight_loss') return Math.round(tdee-500);
+  if(goal==='muscle_gain') return Math.round(tdee+300);
+  return Math.round(tdee);
+}
+
+/* ============ HOME ============ */
+function renderHome(){
+  const bmi = calcBMI(profile.weight, profile.height);
+  const cal = calcCalories(profile.weight, profile.height, profile.age, profile.gender, profile.goal);
+  document.getElementById('statCal').textContent = cal;
+  document.getElementById('statBMI').textContent = bmi;
+
+  const steps = DB.get('steps_'+today, 0);
+  document.getElementById('statSteps').textContent = steps;
+  document.getElementById('stepSlider').value = steps;
+  document.getElementById('stepValue').textContent = steps;
+
+  const water = DB.get('water_'+today, 0);
+  document.getElementById('statWater').textContent = (water/1000).toFixed(1)+'L';
+  document.getElementById('waterAmount').textContent = water;
+  document.getElementById('waterFill').style.width = Math.min(water/2500*100,100)+'%';
+
+  const workout = getWorkoutForToday(profile.level);
+  const completedIds = DB.get('completed_'+today+'_'+profile.level, []);
+  const allDone = completedIds.length === workout.length;
+  const card = document.getElementById('todayWorkoutCard');
+  card.innerHTML = `
+    <div class="workout-head">
+      <div><div class="workout-title">${LEVEL_LABELS[profile.level]} Plan</div><div class="workout-meta">${workout.length} exercises</div></div>
+      ${allDone ? '<div class="badge-done">✓</div>' : '<div style="color:var(--text-secondary)">›</div>'}
+    </div>
+    ${workout.slice(0,3).map(ex=>`<div class="ex-row"><span>🏋️</span><div class="ex-name">${ex.name}</div><div class="ex-sets">${ex.sets}×${ex.reps}</div></div>`).join('')}
+  `;
+
+  const plan = MEAL_PLANS[profile.goal];
+  document.getElementById('mealCalTotal').textContent = plan.cal+' cal';
+  document.getElementById('mealsList').innerHTML = plan.meals.map(m=>`
+    <div class="meal-item"><div class="meal-icon">${m.type}</div><div><div class="meal-name">${m.name}</div><div class="meal-cal">${m.cal} cal</div></div></div>
+  `).join('');
+}
+function updateSteps(val){
+  DB.set('steps_'+today, parseInt(val));
+  document.getElementById('stepValue').textContent = val;
+  document.getElementById('statSteps').textContent = val;
+}
+function addWater(amt){
+  const water = DB.get('water_'+today, 0) + amt;
+  DB.set('water_'+today, water);
+  document.getElementById('waterAmount').textContent = water;
+  document.getElementById('waterFill').style.width = Math.min(water/2500*100,100)+'%';
+  document.getElementById('statWater').textContent = (water/1000).toFixed(1)+'L';
+}
+
+/* ============ WORKOUTS ============ */
+function getWorkoutForToday(level){ return EXERCISES[level]; }
+function renderLevelTabs(){
+  document.getElementById('levelTabs').innerHTML = Object.keys(LEVEL_LABELS).map(lv=>
+    `<div class="level-tab ${lv===currentWorkoutLevel?'active':''}" onclick="switchLevel('${lv}')">${LEVEL_LABELS[lv]}</div>`
+  ).join('');
+}
+function switchLevel(lv){ currentWorkoutLevel = lv; renderLevelTabs(); renderExercises(); }
+function renderExercises(){
+  const list = EXERCISES[currentWorkoutLevel];
+  const completedIds = DB.get('completed_'+today+'_'+currentWorkoutLevel, []);
+  document.getElementById('exerciseList').innerHTML = list.map((ex,i)=>`
+    <div class="exercise-card">
+      <div class="exercise-card-top" onclick="openExercise('${currentWorkoutLevel}',${i})" style="cursor:pointer">
+        <div><div class="exercise-card-name">${ex.name}</div><div class="exercise-card-muscle">${ex.muscle}</div></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="exercise-card-meta">${ex.sets}×${ex.reps}</div>
+          <div class="exercise-check ${completedIds.includes(i)?'done':''}" onclick="event.stopPropagation(); toggleExDone(${i})">${completedIds.includes(i)?'✓':''}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+function toggleExDone(i){
+  let completedIds = DB.get('completed_'+today+'_'+currentWorkoutLevel, []);
+  if(completedIds.includes(i)) completedIds = completedIds.filter(x=>x!==i);
+  else completedIds.push(i);
+  DB.set('completed_'+today+'_'+currentWorkoutLevel, completedIds);
+  renderExercises();
+  if(currentWorkoutLevel === profile.level){
+    updateStreak();
+    renderHome();
+  }
+}
+function updateStreak(){
+  const completedIds = DB.get('completed_'+today+'_'+profile.level, []);
+  const workout = EXERCISES[profile.level];
+  if(completedIds.length === workout.length){
+    const dates = DB.get('streakDates', []);
+    if(!dates.includes(today)){ dates.push(today); DB.set('streakDates', dates); }
+  }
+}
+function openExercise(level, idx){
+  activeExercise = EXERCISES[level][idx];
+  document.getElementById('modalExName').textContent = activeExercise.name;
+  document.getElementById('modalExMeta').textContent = activeExercise.muscle+' • '+activeExercise.sets+' sets × '+activeExercise.reps+' • Rest '+activeExercise.rest+'s';
+  document.getElementById('modalExInstr').innerHTML = activeExercise.instr.map((s,i)=>`<div class="instr-item"><div class="instr-num">${i+1}</div><div>${s}</div></div>`).join('');
+  openModal('exerciseModal');
+}
+
+/* ============ DIET ============ */
+function renderGoalTabs(){
+  document.getElementById('goalTabs').innerHTML = Object.keys(GOAL_LABELS).map(g=>
+    `<div class="level-tab" style="flex:1" data-active="${g===currentDietGoal}" onclick="switchGoal('${g}')">${GOAL_LABELS[g]}</div>`
+  ).join('').replace(/data-active="true"/g,'class="level-tab active"');
+  document.querySelectorAll('#goalTabs .level-tab').forEach(el=>{
+    if(el.getAttribute('data-active')==='true') el.classList.add('active');
+  });
+}
+function switchGoal(g){ currentDietGoal = g; renderGoalTabs(); renderDiet(); }
+function renderDiet(){
+  const plan = MEAL_PLANS[currentDietGoal];
+  document.getElementById('dietCalTotal').textContent = plan.cal;
+  document.getElementById('dietMealsList').innerHTML = plan.meals.map(m=>`
+    <div class="meal-item"><div class="meal-icon">${m.type}</div><div><div class="meal-name">${m.name}</div><div class="meal-cal">${m.cal} cal</div></div></div>
+  `).join('');
+}
+
+/* ============ PROGRESS ============ */
+let weightChartInstance = null, waterChartInstance = null;
+function logWeight(){
+  const w = parseFloat(document.getElementById('weightLogInput').value);
+  if(!w) return;
+  const logs = DB.get('weightLogs', []);
+  const existing = logs.findIndex(l=>l.date===today);
+  const bmi = calcBMI(w, profile.height);
+  if(existing>=0) logs[existing] = {date:today, weight:w, bmi};
+  else logs.push({date:today, weight:w, bmi});
+  DB.set('weightLogs', logs);
+  profile.weight = w;
+  DB.set('profile', profile);
+  document.getElementById('weightLogInput').value = '';
+  renderProgress();
+  renderHome();
+}
+function saveMeasurements(){
+  const m = {
+    date: today,
+    chest: document.getElementById('measChest').value,
+    waist: document.getElementById('measWaist').value,
+    arms: document.getElementById('measArms').value,
+    legs: document.getElementById('measLegs').value,
+  };
+  const logs = DB.get('measurements', []);
+  logs.push(m);
+  DB.set('measurements', logs);
+  alert('Measurements saved!');
+}
+function renderProgress(){
+  const dates = DB.get('streakDates', []);
+  document.getElementById('streakNum').textContent = dates.length;
+  document.getElementById('streakLabel').textContent = dates.length>0 ? 'Keep it going!' : 'Complete a workout to start your streak';
+
+  const logs = DB.get('weightLogs', []);
+  const labels = logs.map(l=>l.date.slice(5));
+  const data = logs.map(l=>l.weight);
+  const ctx1 = document.getElementById('weightChart');
+  if(weightChartInstance) weightChartInstance.destroy();
+  weightChartInstance = new Chart(ctx1, {
+    type:'line',
+    data:{labels: labels.length?labels:['No data'], datasets:[{data: data.length?data:[0], borderColor:'#B8A369', backgroundColor:'rgba(184,163,105,0.15)', fill:true, tension:.3}]},
+    options:{plugins:{legend:{display:false}}, scales:{x:{ticks:{color:'#9a9a95'}},y:{ticks:{color:'#9a9a95'}}}}
+  });
+
+  const last7 = [...Array(7)].map((_,i)=>{
+    const d = new Date(); d.setDate(d.getDate()-(6-i));
+    return d.toISOString().split('T')[0];
+  });
+  const waterData = last7.map(d=>DB.get('water_'+d,0));
+  const ctx2 = document.getElementById('waterChart');
+  if(waterChartInstance) waterChartInstance.destroy();
+  waterChartInstance = new Chart(ctx2, {
+    type:'bar',
+    data:{labels: last7.map(d=>d.slice(5)), datasets:[{data:waterData, backgroundColor:'#6f93b8', borderRadius:6}]},
+    options:{plugins:{legend:{display:false}}, scales:{x:{ticks:{color:'#9a9a95'}},y:{ticks:{color:'#9a9a95'}}}}
+  });
+}
+
+/* ============ PROFILE ============ */
+function renderProfile(){
+  document.getElementById('avatarLetter').textContent = profile.name.charAt(0).toUpperCase();
+  document.getElementById('profileName').textContent = profile.name;
+  document.getElementById('profileMeta').textContent = LEVEL_LABELS[profile.level]+' • '+GOAL_LABELS[profile.goal];
+  document.getElementById('editName').value = profile.name;
+  document.getElementById('notifSwitch').classList.toggle('on', profile.notif);
+  document.getElementById('reminderTime').value = profile.reminderTime;
+  document.getElementById('calcWeight').value = profile.weight;
+  document.getElementById('calcHeight').value = profile.height;
+  document.getElementById('calcAge').value = profile.age;
+
+  document.getElementById('editLevelRow').innerHTML = Object.keys(LEVEL_LABELS).map(lv=>
+    `<button class="choice-btn ${lv===profile.level?'active':''}" data-val="${lv}" onclick="selectChoice(this,'editLevel')">${LEVEL_LABELS[lv]}</button>`
+  ).join('');
+  document.getElementById('editGoalRow').innerHTML = Object.keys(GOAL_LABELS).map(g=>
+    `<button class="choice-btn ${g===profile.goal?'active':''}" data-val="${g}" onclick="selectChoice(this,'editGoal')">${GOAL_LABELS[g]}</button>`
+  ).join('');
+  obData.editLevel = profile.level;
+  obData.editGoal = profile.goal;
+}
+function saveProfile(){
+  profile.name = document.getElementById('editName').value || profile.name;
+  profile.level = obData.editLevel || profile.level;
+  profile.goal = obData.editGoal || profile.goal;
+  DB.set('profile', profile);
+  currentWorkoutLevel = profile.level;
+  currentDietGoal = profile.goal;
+  initApp();
+  goPage('profile');
+  alert('Profile updated!');
+}
+function runCalculator(){
+  const w = parseFloat(document.getElementById('calcWeight').value);
+  const h = parseFloat(document.getElementById('calcHeight').value);
+  const a = parseFloat(document.getElementById('calcAge').value);
+  if(!w||!h||!a) return;
+  const bmi = calcBMI(w,h);
+  const cal = calcCalories(w,h,a,profile.gender,profile.goal);
+  document.getElementById('calcBMI').textContent = bmi;
+  document.getElementById('calcBMICat').textContent = bmiCategory(bmi);
+  document.getElementById('calcCal').textContent = cal+' kcal';
+  document.getElementById('calcResult').style.display = 'block';
+}
+
+/* ============ MODALS ============ */
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+/* ============ REST TIMER ============ */
+function openTimer(){
+  timerSeconds = activeExercise ? activeExercise.rest : 60;
+  timerRunning = false;
+  updateTimerDisplay();
+  openModal('timerModal');
+  startTimer();
+}
+function startTimer(){
+  timerRunning = true;
+  document.getElementById('timerPauseBtn').textContent = 'Pause';
+  clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    if(timerSeconds>0){ timerSeconds--; updateTimerDisplay(); }
+    else { clearInterval(timerInterval); timerRunning=false; if(navigator.vibrate) navigator.vibrate(400); }
+  },1000);
+}
+function pauseTimer(){
+  if(timerRunning){ clearInterval(timerInterval); timerRunning=false; document.getElementById('timerPauseBtn').textContent='Resume'; }
+  else { startTimer(); }
+}
+function resetTimer(){
+  timerSeconds = activeExercise ? activeExercise.rest : 60;
+  updateTimerDisplay();
+  startTimer();
+}
+function updateTimerDisplay(){ document.getElementById('timerDisplay').textContent = timerSeconds; }
+
+/* ============ BOOT ============ */
+if(profile){
+  document.getElementById('onboarding').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  initApp();
+}
+</script>
+</body>
+</html>
